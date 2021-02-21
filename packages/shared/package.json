@@ -1,0 +1,8 @@
+{
+  "name": "@vue/shared",
+  "version": "0.0.1",
+  "description": "vue3 手写源码部分 包之间共享部分",
+  "main": "index.js",
+  "author": "qiao",
+  "license": "MIT"
+}
