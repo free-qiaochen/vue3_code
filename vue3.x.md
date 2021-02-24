@@ -101,3 +101,70 @@ async function build(target) {
 
 - effect：
   effect 中的所有属性都会收集 effect 函数
+
+# 20210224开课 es6 的一些 api
+
+symbol： 可以元编程
+Reflect
+set map
+
+## 利用 Set 结构求数组的交集，并集，差集
+
+JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主要有这几点：
+
+拷贝的对象的值中如果有函数、undefined、symbol 这几种类型，经过 JSON.stringify 序列化之后的字符串中这个键值对会消失；
+
+拷贝 Date 引用类型会变成字符串；
+
+无法拷贝不可枚举的属性；
+
+无法拷贝对象的原型链；
+
+拷贝 RegExp 引用类型会变成空对象；
+
+对象中含有 NaN、Infinity 以及 -Infinity，JSON 序列化的结果会变成 null；
+
+无法拷贝对象的循环应用，即对象成环 (obj[key] = obj)
+
+## reduce
+
+- compose,用 reduce 实现 compose
+
+```js
+let set = new Set(['q', 1, 2, 3, 1])
+console.log(set.entries())
+
+console.log(Object.prototype.toString.call(new Map())) // Map类型
+console.log(Object.prototype.toString.call(new Set())) // Set 类型
+console.log(typeof function () {}) // function
+
+function sum(a, b) {
+  return a + b
+}
+
+function len(str) {
+  return str.length
+}
+
+function addPrefix(content) {
+  return '总长度：' + content
+}
+
+// console.log(addPrefix(len(sum('x1', 'y'))))
+function compose(...fns) {
+  return function (...args) {
+    let lastFn = fns.pop()
+    // 注意这里需要把最后一个函数取出来，是为了适应最后一个函数的参数可以是任意个，任意类型，确保final传的参数可以直接传递给最后一个函数；
+
+    return fns.reduceRight((prev, current, index, arr) => {
+      //[addPrefix,len,sum]
+      console.log('--', prev, current, index, arr)
+      return current(prev) // 每次当前函数处理得是之前函数处理得结果！！！ 但是首个不一样，首个就是首个函数得执行结果
+    }, lastFn(...args)) //先得把参数传入进来
+  }
+}
+const final = compose(addPrefix, len, sum)
+console.log(final('a', 'b'))
+// 还可以用reduce写
+// ？？？？
+```
