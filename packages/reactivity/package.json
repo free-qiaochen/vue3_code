@@ -1,6 +1,6 @@
 {
   "name": "@vue/reactivity",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "index.ts",
   "license": "MIT"
 }

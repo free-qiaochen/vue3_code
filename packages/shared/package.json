@@ -2,7 +2,7 @@
   "name": "@vue/shared",
   "version": "0.0.1",
   "description": "vue3 手写源码部分 包之间共享部分",
-  "main": "index.js",
+  "main": "index.ts",
   "author": "qiao",
   "license": "MIT"
 }
