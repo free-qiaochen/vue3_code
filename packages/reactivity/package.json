@@ -2,5 +2,14 @@
   "name": "@vue/reactivity",
   "version": "0.0.1",
   "main": "index.ts",
-  "license": "MIT"
+  "license": "MIT",
+  "module": "dist/reactivity.esm-bundler.js",
+  "buildOptions": {
+    "name":"VueReactivity",
+    "formats":[
+      "cjs",
+      "esm-bundler",
+      "global"
+    ]
+  }
 }

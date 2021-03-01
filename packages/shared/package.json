@@ -4,5 +4,12 @@
   "description": "vue3 手写源码部分 包之间共享部分",
   "main": "index.ts",
   "author": "qiao",
-  "license": "MIT"
+  "license": "MIT",
+  "module": "dist/shared.esm-bundler.js",
+  "buildOptions":{
+    "name": "VueShared",
+    "formats": [
+      "cjs","esm-bundler"
+    ]
+  }
 }
