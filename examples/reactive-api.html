@@ -16,8 +16,8 @@
     // console.log(reactive, Vue)
     // console.log(Vue)
     console.log(VueReactivity)
-    let { reactive, } = VueReactivity
-    let state = reactive({ name: 'cq', age: 18, hoby: { first: 'music' } })
+    let { reactive, readonly} = VueReactivity
+    let state = readonly({ name: 'cq', age: 18, hoby: { first: 'music' } })
     state.age = 17
     console.log(state, state.name, state.hoby.first)
 

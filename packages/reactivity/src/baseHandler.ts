@@ -1,16 +1,35 @@
 // 实现 new Proxy(target, handler) 的handler
 
-import { hasChanged, hasOwn, isArray, isIntegerKey, isObject } from '@vue/shared/src'
+import { extend, hasChanged, hasOwn, isArray, isIntegerKey, isObject } from '@vue/shared/src'
 import { reactive, readonly } from './reactive'
 
 const get = createGetter()
-
+const shallowGet = createGetter(false,true)
+const readonlyGet= createGetter(true)
+const shallowReadonlyGet = createGetter(true,true)
 const set = createSetter()
+const shallowSet = createSetter(true)
 
 export const mutableHandlers = {
   get,
   set,
 }
+export const shallowReactiveHandlers = {
+  get:shallowGet,
+  set:shallowSet
+}
+let readonlyObj={
+  set:(target,key)=>{
+    console.warn(`set on key ${key} failed,beacuse readonly`)
+  }
+}
+
+export const readonlyHandlers= extend({
+  get:readonlyGet,
+},readonlyObj)
+export const shallowReadonlyHandlers = extend({
+  get :shallowReadonlyGet
+},readonlyObj)
 
 // 是不是仅读的，仅读的属性set时会报异常
 // 是不是深度的
