@@ -1,6 +1,8 @@
 // 实现 new Proxy(target, handler) 的handler
 
 import { extend, hasChanged, hasOwn, isArray, isIntegerKey, isObject } from '@vue/shared/src'
+import { track, trigger } from './effect'
+import { TrackOpTypes, TriggerOrTypes } from './operators'
 import { reactive, readonly } from './reactive'
 
 const get = createGetter()
@@ -40,7 +42,7 @@ function createGetter(isReadonly = false, shallow = false) {
     if (!isReadonly) {
       // 收集依赖，等会数据变化后更新对应的视图
       console.log('执行effect时会取值，收集对应effect')
-      // track()
+      track(target,TrackOpTypes.GET,key)
     }
     if (shallow) {
       return res
@@ -62,9 +64,11 @@ function createSetter(shallow = false) {
     if (!hadKey) {
       // 新增
       console.log('新增')
+      trigger(target,TriggerOrTypes.ADD,key,value)
     } else if (hasChanged(oldValue, value)) {
       // 修改
       console.log('修改')
+      trigger(target,TriggerOrTypes.SET,key,value,oldValue)
     }
     return result
   }

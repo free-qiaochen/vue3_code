@@ -9,23 +9,26 @@
 
 <body>
   <div id="app">effect</div>
-  <script src="https://unpkg.com/vue@next"></script>
-  <!-- <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+  <!-- <script src="https://unpkg.com/vue@next"></script> -->
+  <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
   <script>
-    // let { reactive } = VueReactivity
+    let { reactive, effect } = VueReactivity
     // console.log(reactive, Vue)
-    console.log(Vue)
-    let { reactive, readonly, watchEffect: effect } = Vue
-    let state = reactive({ name: 'cq', age: 18, hoby: { first: 'music' } })
+    // console.log(Vue)
+    // let { reactive, readonly, watchEffect: effect } = Vue
+    let state = reactive({ name: 'cq', age: 18, hoby: { first: 'music', arr: [1, 2] } })
     effect(() => {
       console.log('render effect')
-      app.innerHTML = state.age
-    })
+      app.innerHTML = state.hoby
+    }, { lazy: false })
     setTimeout(() => {
-      state.age = 16
+      state.hoby.arr[10] = 10
     }, 1000);
     // state.age = 17
-    console.log(state)
+    // console.log(state)
+
+    // 1. effect中的所有属性 都会收集effect  track 
+    // 2. 当这个属性值发生变化 会重新执行effect trigger
 
   </script>
 
