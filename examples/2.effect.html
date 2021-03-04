@@ -22,6 +22,7 @@
       app.innerHTML = state.hoby
     }, { lazy: false })
     setTimeout(() => {
+      // 赋值会先获取state.hoby,获取hoby.arr,再给arr[10]赋值
       state.hoby.arr[10] = 10
     }, 1000);
     // state.age = 17

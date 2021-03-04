@@ -1,6 +1,7 @@
 import { isArray, isIntegerKey } from '@vue/shared/src'
 import { TriggerOrTypes } from './operators'
 
+// effect 类似vue2的watcher
 export function effect(fn, options) {
   // 我需要让这个effect变成响应的effect，可以做到数据变化重新执行
   const effect = createReactiveEffect(fn, options)
