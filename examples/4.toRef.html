@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ref-api</title>
+  <title>toRef-api</title>
 </head>
 
 <body>
@@ -15,20 +15,23 @@
     // let { reactive, effect } = VueReactivity
     // console.log(reactive, Vue)
     // console.log(Vue)
-    let { reactive, readonly, watchEffect: effect, ref } = Vue
-    let name = ref('zf')
-    let name1 = ref({ test: 'zf' })
+    let { reactive, watchEffect: effect, ref, toRef, toRefs } = Vue
+
+    let name = reactive({ test: 'zf', age: 18, })
+    let r1 = toRef(name, 'age')
+    let { test, age } = toRefs(name)
     effect(() => {
-      
       console.log('render effect', name)
-      app.innerHTML = name.value
-      // app.innerHTML = name1.value.test
+      app.innerHTML = test.value
+
     }, { lazy: false })
     setTimeout(() => {
-      name.value = 'jw'
-      name1.value.test = 'jw'
+      name.test = 'jw'
     }, 1000);
+    console.log(name, r1, test, age)
 
+    // reactive 响应式api
+    // ref reactive不能代理普通类型，故使用ref响应式
 
   </script>
 
