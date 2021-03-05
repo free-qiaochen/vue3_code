@@ -8,6 +8,11 @@ export function ref(value) {
   // 将普通类型变成一个对象（RefImpl类的实例）
   return createRef(value)
 }
+export function shallowRef(value) {
+  // shallowRef 对于value是普通类型和ref一样，复杂类型则有差异了
+  return createRef(value, true)
+}
+
 // 将某一个key对应的值（值可以是对象）转化成ref
 export function toRef(target, key) {
   return new ObjectRefImpl(target, key)

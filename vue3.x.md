@@ -102,7 +102,7 @@ async function build(target) {
 - effect：
   effect 中的所有属性都会收集 effect 函数
 
-# 20210224开课 es6 的一些 api
+# 20210224 开课 es6 的一些 api
 
 symbol： 可以元编程
 Reflect
@@ -125,3 +125,17 @@ JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主
 对象中含有 NaN、Infinity 以及 -Infinity，JSON 序列化的结果会变成 null；
 
 无法拷贝对象的循环应用，即对象成环 (obj[key] = obj)
+
+## 响应式部分 api
+
+```js
+// reactive 响应式 api
+// ref reactive 不能代理普通类型，故使用 ref 响应式
+// 想解构 reactive -> toRefs, 解构某一个属性使用 toRef
+
+// effect 副作用更新，track 收集依赖，trigger 触发更新
+```
+
+- ref 和 reactive 的区别 reactive 内部采用 proxy ref 中内部使用的是 defineProperty(class 的 get 和 set babel 编译后还是 defineProperty)
+
+##
