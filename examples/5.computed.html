@@ -19,17 +19,22 @@
     // computed: effect（lazy）+scheduler + 缓存的标识，
 
     const age = ref(18)
+    const state = reactive({ name: 'zf', age: 10 })
+    // const myAge = computed(() => {
+    //   return age.value + 11
+    // })
     const myAge = computed(() => {
-      return age.value + 11
+      return state.age + 11
     })
 
     effect(() => {
-      console.log('render effect', age, myAge.value)
+      console.log('render effect', myAge)
+      // app.innerHTML = myAge.value
       app.innerHTML = myAge.value
-
     })
     setTimeout(() => {
-      age.value = 66
+      // age.value = 66
+      state.age = 11
       console.log('change')
     }, 2000)
     /**
@@ -47,7 +52,7 @@
      * fn()执行，返回计算属性变化后的值，
      * setTimeout->ref的 set -> trigger -> scheduler -> trigger -> effect -> reactiveEffect 页面effect的fn()读值-> computed的get-> get中的effect() ->fn()计算属性的fn计算新值，
      * 接下来函数该出栈了---
-     * 
+     *
      * **/
 
 
