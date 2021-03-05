@@ -138,4 +138,19 @@ JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主
 
 - ref 和 reactive 的区别 reactive 内部采用 proxy ref 中内部使用的是 defineProperty(class 的 get 和 set babel 编译后还是 defineProperty)
 
-##
+## computed 部分功能，参加 example 用例
+
+- computed 中使用了响应式数据 ref，
+- effect 中使用 computed 中返回的数据，
+- 流程梳理：
+- 1.响应式数据 ref 定时改变后出发 ref 的 set
+- 2.set 判断数据改变了，修改 ref 类的 this.\_value，再触发 trigger()（trigger(this, TriggerOrTypes.SET, 'value', newValue)}）
+- 到 trigger 里触发更新，找到 ref 对象收集的 effect：computed 中的那个 effect（有 scheduler 方法，并调用 scheduler 方法），
+- ComputedRefImpl 类中的 scheduler 方法执行，再次触发 trigger 更新（trigger(this, TriggerOrTypes.SET, 'value')），
+- 这时计算属性收集的 effect 执行（计算属性是在页面的 effect 函数的 fn 读取使用的），effect 执行会走 fn(),fn 是 effect 中传的函数，
+- fn 执行，读取计算属性的 value，接下来调用 ComputedRefImpl 的 get value()获取计算属性值，
+- get 获取时是脏的，会调用 this.effect(),走的是 computedRefImpl 的 effect(),effect()执行再次调用其 fn（这个 fn 是在 computed 中传给自己 effect 的 getter 函数）
+- fn()执行，返回计算属性变化后的值，
+- setTimeout->ref 的 set -> trigger -> scheduler -> trigger -> effect -> reactiveEffect 页面 effect 的 fn()读值-> computed 的 get-> get 中的 effect() ->fn()计算属性的 fn 计算新值，
+- 接下来函数该出栈了---
+-

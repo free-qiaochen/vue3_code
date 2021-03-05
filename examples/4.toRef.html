@@ -9,13 +9,13 @@
 
 <body>
   <div id="app">effect</div>
-  <script src="https://unpkg.com/vue@next"></script>
-  <!-- <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+  <!-- <script src="https://unpkg.com/vue@next"></script> -->
+  <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
   <script>
-    // let { reactive, effect } = VueReactivity
+    let { reactive, effect, ref, toRef, toRefs } = VueReactivity
     // console.log(reactive, Vue)
     // console.log(Vue)
-    let { reactive, watchEffect: effect, ref, toRef, toRefs } = Vue
+    // let { reactive, watchEffect: effect, ref, toRef, toRefs } = Vue
 
     let name = reactive({ test: 'zf', age: 18, })
     let r1 = toRef(name, 'age')
