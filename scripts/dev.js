@@ -3,7 +3,8 @@
 const fs = require('fs');
 const execa = require('execa');
 
-const target = 'reactivity'
+// const target = 'reactivity'
+const target = 'runtime-dom'
 
 // 对我们的目标进行打包
 

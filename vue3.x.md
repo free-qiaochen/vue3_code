@@ -154,3 +154,18 @@ JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主
 - setTimeout->ref 的 set -> trigger -> scheduler -> trigger -> effect -> reactiveEffect 页面 effect 的 fn()读值-> computed 的 get-> get 中的 effect() ->fn()计算属性的 fn 计算新值，
 - 接下来函数该出栈了---
 -
+
+## 待完成 list
+
+- 响应式源码调试 ？？？
+- vue3 初始化流程，组件初始化流程
+- 组件更新，diff，最长递增子序列
+- vue3 生命周期
+- vue3 源码，runtime-dom 和 runtime-core 调试，熟悉流程
+
+> ts
+
+## runtime：新加包模块：runtime-core,runtime-dom
+
+- vue3 的 runtime 模块= runtime-core+runtime-dom
+  > 在 packages 目录下新建文件夹包名，在新的包下 yarn init -y，初始化 package.json
