@@ -14,9 +14,27 @@
 
   <script>
     // const { createApp, h, reactive } = Vue
-    const { createApp, reactive } = VueRuntimeDOM
+    const { createApp, reactive,h } = VueRuntimeDOM
     const App = {
-
+      data() {
+        return {
+          oldName: 'vue2 '
+        }
+      },
+      setup(props, context) {
+        let state = reactive({ name: 'cq1', age: 18 });
+        fn = function () {
+          state.name = 'zf'
+          state.name = 'cq'
+        }
+        // return () => {
+        //   return h('div', { onClick: fn }, state.name)
+        // }
+      },
+      render(proxy) {
+        console.log('proxy', proxy.oldName) // data 上的数据可以在
+        return h('div', { onClick: fn }, 'state.age')
+      }
     }
     let app = createApp(App, { name: 'cq', age: 18, })
     app.mount('#app')
