@@ -5,7 +5,7 @@
 import { isArray, isObject } from '@vue/shared/src'
 import { createVNode, isVnode } from './vnode'
 
-// h函数主要是调用createVNode,
+// h函数主要是调用createVNode,这里要适应h函数传递各种参数的情况
 export function h(type, propsOrChildren, children) {
   const l = arguments.length
   if (l == 2) {
@@ -22,9 +22,10 @@ export function h(type, propsOrChildren, children) {
     }
   } else {
     if (l > 3) {
+      children = Array.prototype.slice.call(arguments, 2)
     } else if (l == 3 && isVnode(children)) {
       children = [children]
     }
-    return createVNode(type,propsOrChildren,children)
+    return createVNode(type, propsOrChildren, children)
   }
 }

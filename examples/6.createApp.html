@@ -14,7 +14,7 @@
 
   <script>
     // const { createApp, h, reactive } = Vue
-    const { createApp, reactive,h } = VueRuntimeDOM
+    const { createApp, reactive, h } = VueRuntimeDOM
     const App = {
       data() {
         return {
@@ -27,13 +27,20 @@
           state.name = 'zf'
           state.name = 'cq'
         }
-        // return () => {
-        //   return h('div', { onClick: fn }, state.name)
-        // }
+        return () => {
+          // return h('div',{a:1});
+          return h('div',{},'helloworld');
+          // h('div',{},h('span'));
+          // h('div',h('span'));
+        //  return h('div',[h('span'),h('span')]);
+          // return h('div',null,h('span'),h('span'));
+          return h('div', null, 'a', 'b', 'c');
+          // return h('div', { onClick: fn }, state.name)
+        }
       },
       render(proxy) {
         console.log('proxy', proxy.oldName) // data 上的数据可以在
-        return h('div', { onClick: fn }, 'state.age')
+        return h('div', { onClick: fn }, state.name)
       }
     }
     let app = createApp(App, { name: 'cq', age: 18, })

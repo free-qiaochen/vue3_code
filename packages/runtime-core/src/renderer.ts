@@ -2,7 +2,8 @@ import { effect } from '@vue/reactivity'
 import { ShapeFlags } from '@vue/shared/src'
 import { createAppAPI } from './apiCreateApp'
 import { createComponentInstance, setupComponent } from './component'
-import { Text } from './vnode'
+import { queueJob } from './scheduler'
+import { normalizeVNode, Text } from './vnode'
 
 export function createRenderer(rendererOptions) {
   const {
@@ -29,16 +30,18 @@ export function createRenderer(rendererOptions) {
           let subTree = (instance.subTree = instance.render.call(proxyToUse, proxyToUse))
 
           // 用render函数的返回值，继续渲染
-          patch(null, subTree, container)
+          patch(null, subTree, container) // 调用patch形成递归
           instance.isMounted = true
         } else {
           // 更新，diff
+          console.log('update component')
         }
       },
       {
-        scheduler: () => {
-          console.log('scheduler')
-        },
+        // scheduler: (job) => {
+        //   console.log('scheduler', job)
+        // },
+        scheduler:queueJob
       }
     )
   }
@@ -56,15 +59,45 @@ export function createRenderer(rendererOptions) {
       mountComponent(n2, container)
     } else {
       // 组件更新流程
+      console.log('component update')
     }
   }
 
   // ---------元素-------
+  const mountChildren = (children, container) => {
+    for (let i = 0; i < children.length; i++) {
+      let child = normalizeVNode(children[i])
+      patch(null, child, container)
+    }
+  }
+  const mountElement = (vnode, container) => {
+    // 元素渲染
+    const { props, type, shapeFlag, children } = vnode
+    let el = (vnode.el = hostCreateElement(type))
+    if (props) {
+      for (const key in props) {
+        hostPatchProp(el, key, null, props[key])
+      }
+    }
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      hostSetElementText(el, children) // 文本操作，
+    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      mountChildren(children, el) // 渲染子节点
+    }
+    hostInsert(el, container)
+  }
   const processElement = (n1, n2, container) => {
     console.log('element patch:', n1, n2, container)
+    if (n1 == null) {
+      // 元素挂载
+      mountElement(n2, container)
+    } else {
+      // 元素更新
+      console.log('element update')
+    }
   }
 
-  // 文本处理
+  // --------文本处理--------
   const processText = (n1, n2, container) => {
     if (n1 == null) {
       hostInsert((n2.el = hostCreateText(n2.children)), container)

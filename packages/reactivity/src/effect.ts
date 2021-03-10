@@ -103,8 +103,8 @@ export function trigger(target, type, key?, newValue?, oldValue?) {
   effects.forEach((effect: any) => {
     console.log('effects call')
     if (effect.options.scheduler) {
-      // effect.options.scheduler(effect);
-      effect.options.scheduler()
+      effect.options.scheduler(effect) // 组件的scheduler需要effect函数
+      // effect.options.scheduler()
     } else {
       effect()
     }
