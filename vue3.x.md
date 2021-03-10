@@ -167,5 +167,248 @@ JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主
 
 ## runtime：新加包模块：runtime-core,runtime-dom
 
+### 组件的初始化：
+
 - vue3 的 runtime 模块= runtime-core+runtime-dom
-  > 在 packages 目录下新建文件夹包名，在新的包下 yarn init -y，初始化 package.json
+  > 在 packages 目录下新建文件夹包名，在新的包下 yarn init -y，初始化 package.json,添加 src 目录，开始源码编写
+- 介绍 VueRuntimeDOM
+  > Vue 中将 runtime 模块分为 runtime-core 核心代码 及 其他平台对应的运行时，那么 VueRuntimeDOM 无疑就是解决浏览器运行时的问题，此**包中提供了 DOM 属性操作和节点操作一系列接口**。
+
+### patchProp 实现，主要针对不同的属性提供不同的 patch 操作
+
+```js
+// runtime-dom/src/patchProp.ts
+import { patchClass } from './modules/class' // 类名处理
+import { patchStyle } from './modules/style' // 样式处理
+import { patchEvent } from './modules/events' // 事件处理
+import { patchAttr } from './modules/attrs' // 属性处理
+import { isOn } from '@vue/shared'
+export const patchProp = (el, key, prevValue, nextValue) => {
+  switch (key) {
+    // 先处理特殊逻辑
+    case 'class':
+      patchClass(el, nextValue)
+      break
+    case 'style':
+      patchStyle(el, prevValue, nextValue)
+      break
+    default:
+      if (isOn(key)) {
+        // 如果是事件
+        patchEvent(el, key, nextValue)
+      } else {
+        patchAttr(el, key, nextValue)
+      }
+      break
+  }
+}
+```
+
+### nodeOps 实现：主要是所有节点操作的方法
+
+```js
+// runtime-dom/src/nodeOps.ts
+export const nodeOps = {
+  insert: (child, parent, anchor) => {
+    // 增加
+    parent.insertBefore(child, anchor || null)
+  },
+  remove: (child) => {
+    // 删除
+    const parent = child.parentNode
+    if (parent) {
+      parent.removeChild(child)
+    }
+  },
+  // 创建元素
+  createElement: (tag) => document.createElement(tag),
+  // 创建文本
+  createText: (text) => document.createTextNode(text),
+  // 设置元素内容
+  setElementText: (el, text) => {
+    el.textContent = text
+  },
+  // 设置文本内容
+  setText: (node, text) => {
+    node.nodeValue = text
+  },
+  parentNode: (node) => node.parentNode, // 获取父节点
+  nextSibling: (node) => node.nextSibling, // 获取下个兄弟
+  querySelector: (selector) => document.querySelector(selector),
+}
+```
+
+### runtimeDom 的入口文件主要实现
+
+> 用户调用的 createApp 函数就在这里被声明
+
+```js
+// runtime-dom/src/index.ts
+import { createRenderer } from '@vue/runtime-core/src'
+import { extend } from '@vue/shared/src'
+import { patchProp } from './patchProp'
+import { nodeOps } from './nodeOps'
+
+console.log('runtime-dom')
+
+// runtimeDom中对dom操作的所有选项
+const rendererOptions = extend({ patchProp }, nodeOps)
+console.log(rendererOptions)
+// vue 中runtime-core 提供了核心的方法，
+export function createApp(rootComponent, rootProps = null) {
+  // 高阶函数createRenderer，-这些逻辑移动到core中与平台代码无关
+  const app = createRenderer(rendererOptions).createApp(rootComponent, rootProps)
+  const { mount } = app
+  app.mount = function (container) {
+    container = document.querySelector(container)
+    container.innerHTML = ''
+    console.log('dom中的mount,清空容器')
+    const proxy = mount(container) // 执行挂载逻辑
+    return proxy
+  }
+  return app
+}
+
+export * from '@vue/runtime-core'
+```
+
+### runtimeCore 中的(主要流程)代码实现
+
+```js
+// runtime-core/src/renderer.ts
+import { createAppAPI } from './apiCreateApp'
+
+export function createRenderer(rendererOptions) {
+  // 渲染时所到的api
+  const render = (vnode, container) => {
+    // 核心渲染方法
+    // 将虚拟节点转化成真实节点插入到容器中
+    patch(null, vnode, container) // 初始化逻辑老的虚拟节点为null
+  }
+  return {
+    createApp: createAppAPI(render),
+  }
+}
+```
+
+```ts
+// runtime-core/src/apiCreateApp.ts
+import { createVNode } from './vnode'
+
+export function createAppAPI(render) {
+  return function createApp(rootComponent, rootProps = null) {
+    const app = {
+      _props: rootProps, // 属性
+      _component: rootComponent, // 组件
+      _container: null,
+      mount(rootContainer) {
+        // 1.通过rootComponent 创建vnode
+        // 2.调用render方法将vnode渲染到rootContainer中
+        const vnode = createVNode(rootComponent, rootProps)
+        render(vnode, rootContainer)
+        app._container = rootContainer
+      },
+    }
+    return app
+  }
+}
+```
+
+### Vnode 实现
+
+```ts
+// runtime-core/src/vnode.ts
+import { isObject, isString, ShapeFlags } from '@vue/shared/src'
+export const createVNode = (type, props, children = null) => {
+  const shapeFlag = isString(type)
+    ? ShapeFlags.ELEMENT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT
+    : 0
+  const vnode = {
+    type,
+    props,
+    children,
+    key: props && props.key, // 用于diff算法
+    el: null, // 虚拟节点对应的真实节点
+    shapeFlag, // 自己是什么类型
+  }
+  normalizeChildren(vnode, children) // 根据子节点计算孩子类型
+  return vnode
+}
+```
+
+### 组件初次渲染，渲染流程：
+
+> 初次调用 render 方法时，虚拟节点的类型为组件
+
+- mount()->render()->patch()->processComponent()->mountComponent()->
+- const instance = createComponentInstance()---为组件创造实例-->
+- setupComponent(instance)--给 instance 赋值，注意这里有分叉--->
+  - setupStatefulComponent()---(提供 instance.proxy, 代理实例上一系列属性,)---->
+  - PublicInstanceProxyHandlers --------->
+  - createSetupContext,setup()--->
+  - handleSetupResult()---- 处理返回值-->
+  - finishComponentSetup()----确保实例上有 render 函数---->
+- setupRenderEffect()----给组件增加渲染 effect------->
+
+  - instance.update = effect()----->
+  - subTree = (instance.subTree = instance.render.call(proxyToUse,proxyToUse));-->render 函数（用户写的 render 函数）执行，返回的是虚拟节点（组件要渲染的元素的虚拟节点）
+    > 例如：`const App = {render : (r) =>h('div', {}, 'hello zf')}`
+  - patch(null,subTree,container); 渲染子树，形成递归渲染到最底层，
+    > initialVNode.el = subTree.el; // 组件的 el 和子树的 el 是同一个
+    > instance.isMounted = true; 组件已经挂载完毕
+
+- 元素创建流程：
+
+  1. h 方法的实现：创建并返回 vnode，主要是调用 createVNode()
+  2. 创建真实节点:
+
+  ```ts
+  const mountElement = (vnode, container) => {
+    // 创建节点保存到vnode中
+    const { props, shapeFlag, type, children } = vnode
+    let el = (vnode.el = hostCreateElement(type))
+
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 文本直接插入即可
+      hostSetElementText(el, children)
+    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      mountChildren(children, el) // 对子节点进行处理
+    }
+
+    if (props) {
+      // 处理属性
+      for (const key in props) {
+        hostPatchProp(el, key, null, props[key])
+      }
+    }
+    hostInsert(el, container)
+  }
+  ```
+
+```ts
+// runtime-core/src/renderer.ts
+// createRenderer方法中的核心patch方法，
+const patch = (n1, n2, container) => {
+  // 针对不同类型，做初始化操作
+  const { shapeFlag, type } = n2
+  switch (type) {
+    case Text:
+      processText(n1, n2, container)
+      break
+
+    default:
+      if (shapeFlag & ShapeFlags.ELEMENT) {
+        // 标签
+        processElement(n1, n2, container)
+      } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+        // 组件
+        processComponent(n1, n2, container)
+      }
+      break
+  }
+}
+```
+
+## diff
