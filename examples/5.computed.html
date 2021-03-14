@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>toRef-api</title>
+</head>
+
+<body>
+  <div id="app">effect</div>
+  <!-- <script src="https://unpkg.com/vue@next"></script> -->
+  <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+  <script>
+    let { reactive, effect, ref, computed } = VueReactivity
+    // console.log(reactive, Vue)
+    // console.log(Vue)
+    // let { reactive, watchEffect: effect, ref, toRef, toRefs, computed } = Vue
+    // computed: effect（lazy）+scheduler + 缓存的标识，
+
+    const age = ref(18)
+    const state = reactive({ name: 'zf', age: 10 })
+    // const myAge = computed(() => {
+    //   return age.value + 11
+    // })
+    const myAge = computed(() => {
+      return state.age + 11
+    })
+
+    effect(() => {
+      console.log('render effect', myAge)
+      // app.innerHTML = myAge.value
+      app.innerHTML = myAge.value
+    })
+    setTimeout(() => {
+      // age.value = 66
+      state.age = 11
+      console.log('change')
+    }, 2000)
+    /**
+     * computed中使用了响应式数据ref，
+     * effect中使用computed中返回的数据，
+     * 流程梳理：
+     * 1.响应式数据ref定时改变后出发ref的set
+     * 2.set判断数据改变了，修改ref类的this._value，再触发trigger()（trigger(this, TriggerOrTypes.SET, 'value', newValue)
+    }）
+     * 到trigger里触发更新，找到ref对象收集的effect：computed中的那个effect（有scheduler方法，并调用scheduler方法），
+     * ComputedRefImpl类中的scheduler方法执行，再次触发trigger更新（trigger(this, TriggerOrTypes.SET, 'value')），
+     * 这时计算属性收集的effect执行（计算属性是在页面的effect函数的fn读取使用的），effect执行会走fn(),fn是effect中传的函数，
+     * fn执行，读取计算属性的value，接下来调用ComputedRefImpl的get value()获取计算属性值，
+     * get获取时是脏的，会调用this.effect(),走的是computedRefImpl的effect(),effect()执行再次调用其fn（这个fn是在computed中传给自己effect的getter函数）
+     * fn()执行，返回计算属性变化后的值，
+     * setTimeout->ref的 set -> trigger -> scheduler -> trigger -> effect -> reactiveEffect 页面effect的fn()读值-> computed的get-> get中的effect() ->fn()计算属性的fn计算新值，
+     * 接下来函数该出栈了---
+     *
+     * **/
+
+
+
+  </script>
+
+</body>
+
+</html>

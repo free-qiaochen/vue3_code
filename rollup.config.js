@@ -37,7 +37,7 @@ const options = pkg.buildOptions; // 自己在package.json中定义的选项
 
 
 function createConfig (format, output) {
-  output.name = options.name;
+  output.name = options.name; // global.js 文件输出的全局变量，会挂载在window上（因var声明）
   output.sourcemap = true;
   return {
     input: resolve(`src/index.ts`),

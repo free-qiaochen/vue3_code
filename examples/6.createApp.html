@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>初始化</title>
+</head>
+
+<body>
+  <!-- <script src="https://unpkg.com/vue@next"></script> -->
+  <script src="../node_modules/@vue/runtime-dom/dist/runtime-dom.global.js"></script>
+  <div id="app">createApp</div>
+
+  <script>
+    // const { createApp, h, reactive } = Vue
+    const { createApp, reactive, h } = VueRuntimeDOM
+    const App = {
+      data() {
+        return {
+          oldName: 'vue2 '
+        }
+      },
+      setup(props, context) {
+        let state = reactive({ name: 'cq1', age: 18 });
+        fn = function () {
+          state.name = 'zf'
+          state.name = 'cq'
+        }
+        return () => {
+          // return h('div',{a:1});
+          // return h('div',{},'helloworld');
+          // h('div',{},h('span'));
+          // h('div',h('span'));
+        //  return h('div',[h('span'),h('span')]);
+          // return h('div',null,h('span'),h('span'));
+          // return h('div', null, 'a', 'b', 'c');
+          return h('div', { onClick: fn }, state.name)
+        }
+      },
+      render(proxy) {
+        console.log('proxy', proxy.oldName) // data 上的数据可以在
+        return h('div', { onClick: fn }, state.name)
+      }
+    }
+    let app = createApp(App, { name: 'cq', age: 18, })
+    app.mount('#app')
+  </script>
+</body>
+
+</html>

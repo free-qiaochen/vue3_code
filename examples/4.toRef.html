@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>toRef-api</title>
+</head>
+
+<body>
+  <div id="app">effect</div>
+  <!-- <script src="https://unpkg.com/vue@next"></script> -->
+  <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+  <script>
+    let { reactive, effect, ref, toRef, toRefs } = VueReactivity
+    // console.log(reactive, Vue)
+    // console.log(Vue)
+    // let { reactive, watchEffect: effect, ref, toRef, toRefs } = Vue
+
+    let name = reactive({ test: 'zf', age: 18, })
+    let r1 = toRef(name, 'age')
+    let { test, age } = toRefs(name)
+    effect(() => {
+      console.log('render effect', name)
+      app.innerHTML = test.value
+
+    }, { lazy: false })
+    setTimeout(() => {
+      name.test = 'jw'
+    }, 1000);
+    console.log(name, r1, test, age)
+
+    // reactive 响应式api
+    // ref reactive不能代理普通类型，故使用ref响应式
+    // 想解构reactive -> toRefs, 解构某一个属性使用toRef
+    // effect 副作用更新，track收集依赖，trigger触发更新
+
+  </script>
+
+</body>
+
+</html>

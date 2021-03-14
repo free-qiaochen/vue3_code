@@ -1,7 +1,8 @@
 import { isArray, isIntegerKey } from '@vue/shared/src'
 import { TriggerOrTypes } from './operators'
 
-export function effect(fn, options) {
+// effect 类似vue2的watcher
+export function effect(fn, options: any = {}) {
   // 我需要让这个effect变成响应的effect，可以做到数据变化重新执行
   const effect = createReactiveEffect(fn, options)
   if (!options.lazy) {
@@ -97,5 +98,15 @@ export function trigger(target, type, key?, newValue?, oldValue?) {
     }
   }
   // 上边分条件汇总已收集的effects
-  effects.forEach((effect: any) => effect())
+  // effects.forEach((effect: any) => effect())
+  // computed的实现修改effect调用
+  effects.forEach((effect: any) => {
+    console.log('effects call')
+    if (effect.options.scheduler) {
+      effect.options.scheduler(effect) // 组件的scheduler需要effect函数
+      // effect.options.scheduler()
+    } else {
+      effect()
+    }
+  })
 }
