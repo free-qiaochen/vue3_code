@@ -125,3 +125,6 @@ JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主
 对象中含有 NaN、Infinity 以及 -Infinity，JSON 序列化的结果会变成 null；
 
 无法拷贝对象的循环应用，即对象成环 (obj[key] = obj)
+
+## question??
+- vnode subtree?
