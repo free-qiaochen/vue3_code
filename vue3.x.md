@@ -127,8 +127,301 @@ JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主
 无法拷贝对象的循环应用，即对象成环 (obj[key] = obj)
 
 ## question??
+
 - vnode subtree?
+
 ## 响应式部分 api
+
+> v3 响应式原理梳理：
+
+- 响应式 api 的实现
+- createReactiveObject 实现
+- effect 实现
+- track 依赖收集 (effect中render执行时触发get)
+- trigger 触发更新
+- 响应式 Api：Ref 实现（reactive 不能代理普通类型，故使用 ref 响应式处理普通值）
+- 实现 computed
+
+1. 响应式 api 的实现
+
+```js
+// 使用：
+const { reactive, shallowReactive, readonly, shallowReadonly } = VueReactivity
+let obj = { name: 'zf', age: { n: 11 } }
+const state = reactive(obj)
+const state = shallowReactive(obj)
+const state = readonly(obj)
+const state = shallowReadonly(obj)
+// 针对不同的API创建不同的响应式对象，它们都走createReactiveObject()函数，但是传递不同的xxxHandlers()拦截函数；
+
+export function reactive(target) {
+  return createReactiveObject(target, false, mutableHandlers)
+}
+export function shallowReactive(target) {
+  return createReactiveObject(target, false, shallowReactiveHandlers)
+}
+// ...等等
+/**
+ *
+ * @param target 拦截的目标
+ * @param isReadonly 是不是仅读属性
+ * @param baseHandlers 对应的拦截函数
+ */
+function createReactiveObject(target, isReadonly, baseHandlers) {}
+```
+
+2. createReactiveObject 实现
+   > Vue3 中采用 proxy 实现数据代理, 核心就是拦截 get 方法和 set 方法，当获取值时收集 effect 函数，当修改值时触发对应的 effect 重新执行
+
+```js
+import { isObject } from '@vue/shared'
+const reactiveMap = new WeakMap()
+const readonlyMap = new WeakMap()
+function createReactiveObject(target, isReadonly, baseHandlers) {
+  // 1.如果不是对象直接返回
+  if (!isObject(target)) {
+    return target
+  }
+  const proxyMap = isReadonly ? readonlyMap : reactiveMap // 获取缓存对象
+  const existingProxy = proxyMap.get(target)
+  // 2.代理过直接返回即可
+  if (existingProxy) {
+    return existingProxy
+  }
+  // 3.代理的核心
+  const proxy = new Proxy(target, baseHandlers)
+  proxyMap.set(target, proxy) // 缓存代理过的对象
+  // 4.返回代理对象
+  return proxy
+}
+// baseHandlers实现（mutableHandlers）
+export const mutableHandlers = {
+  get,
+  set,
+}
+const get = createGetter()
+const set = createSetter()
+/**
+ * @param isReadonly 是不是仅读
+ * @param shallow 是不是浅响应
+ */
+function createGetter(isReadonly = false, shallow = false) {
+  return function get(target, key, receiver) {
+    const res = Reflect.get(target, key, receiver)
+    // 取值：res = target[key]
+    if (!isReadonly) {
+      // 如果是仅读的无需收集依赖
+      // effect函数执行时，进行取值操作，让属性记住对应的effect函数
+      console.log('依赖收集')
+      track(target, TrackOpTypes.GET, key)
+    }
+    if (shallow) {
+      // 浅无需返回代理
+      return res
+    }
+    if (isObject(res)) {
+      // 取值时，值是对象或数组就递归代理
+      return isReadonly ? readonly(res) : reactive(res)
+    }
+    return res
+  }
+}
+
+function createSetter(shallow = false) {
+  return function set(target, key, value, receiver) {
+    const result = Reflect.set(target, key, value, receiver)
+    // 。。。
+    return result
+  }
+}
+```
+
+3. effect 实现
+   > 响应式 effect 实现，effect 作用类似 vue2 中的 watcher
+
+```js
+export function effect(fn, options: any = {}) {
+  // 创建响应式effect
+  const effect = createReactiveEffect(fn, options)
+  // 默认会让effect先执行一次
+  if (!options.lazy) {
+    effect()
+  }
+  return effect
+}
+let uid = 0
+function createReactiveEffect(fn, options) {
+  // 返回响应式effect
+  const effect = function reactiveEffect() {
+    // todo...
+    // 利用栈型结构存储effect，保证依赖关系，（因为effect存在嵌套使用的情况）
+    if (!effectStack.includes(effect)) {
+      try {
+        effectStack.push(effect)
+        activeEffect = effect // 记录当前的effect
+        return fn() // 执行用户传递的fn -> 取值操作
+      } finally {
+        effectStack.pop()
+        activeEffect = effectStack[effectStack.length - 1]
+      }
+    }
+  }
+  effect.id = uid++ // 用于做标识的
+  effect._isEffect = true // 标识是响应式effect
+  effect.raw = fn // 记录原本的fn
+  effect.deps = [] // 用于收集effect对应的相关属性
+  effect.options = options
+  return effect
+}
+```
+
+4. track 依赖收集
+
+```js
+// effect函数执行时，走render函数，进行取值操作，触发get拦截方法，调用track收集依赖；
+const targetMap = new WeakMap()
+export function track(target, type, key) {
+  if (activeEffect === undefined) {
+    // 如果不在effect中取值，则无需记录
+    return
+  }
+  let depsMap = targetMap.get(target)
+  // WeakMap({name:'zf',age:11},{name:{Set},age:{Set}})
+  if (!depsMap) {
+    // 构建存储结构,没收集过依赖的数据对象
+    targetMap.set(target, (depsMap = new Map()))
+  }
+  let dep = depsMap.get(key)
+  if (!dep) {
+    depsMap.set(key, (dep = new Set()))
+  }
+  if (!dep.has(activeEffect)) {
+    dep.add(activeEffect) // 收集数据所在的effect
+    activeEffect.deps.push(dep)
+  }
+}
+// WeakMap({name:'zf',age:11},{name:{Set},age:{Set}})
+// 收集依赖的存储结构：weakMap{key是target数据对象，value是map对象，map内是获取数据key以及其依赖effect的set结构，effect存在数据对应key的set结构中，如上所示}
+```
+
+5. trigger 触发更新
+   > 对新增属性和修改属性做分类
+
+```js
+function createSetter(shallow = false) {
+  return function set(target, key, value, receiver) {
+    const oldValue = target[key]
+    const hadKey =
+      isArray(target) && isIntegerKey(key) ? Number(key) < target.length : hasOwn(target, key)
+    const result = Reflect.set(target, key, value, receiver)
+    if (!hadKey) {
+      // 新增属性
+      trigger(target, TriggerOpTypes.ADD, key, value)
+    } else if (hasChanged(value, oldValue)) {
+      // 修改属性
+      trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+    }
+    return result
+  }
+}
+```
+
+> 将需要触发的 effect 找到依次执行
+
+```js
+export function trigger(target, type, key?, newValue?, oldValue?) {
+  // targetMap是get时建立的依赖收集结构
+  const depsMap = targetMap.get(target)
+  if (!depsMap) {
+    // 属性没有对应的effect
+    return
+  }
+  const effects = new Set() // 设置集合
+  const add = (effectsToAdd) => {
+    if (effectsToAdd) {
+      effectsToAdd.forEach((effect) => {
+        effects.add(effect)
+      })
+    }
+  }
+  if (key === 'length' && isArray(target)) {
+    // 如果修改的是长度
+    depsMap.forEach((dep, key) => {
+      // 如果有长度的依赖要更新  如果依赖的key小于设置的长度也要更新
+      if (key == 'length' || key >= newValue) {
+        add(dep)
+      }
+    })
+  } else {
+    if (key !== void 0) {
+      // 修改key
+      add(depsMap.get(key))
+    }
+    switch (type) {
+      case TriggerOpTypes.ADD:
+        if (isArray(target)) {
+          if (isIntegerKey(key)) {
+            // 给数组新增属性，直接触发length即可
+            add(depsMap.get('length'))
+          }
+        }
+        break
+      default:
+        break
+    }
+  }
+  // 遍历收集的effects执行
+  effects.forEach((effect: any) => {
+    effect()
+  })
+}
+```
+
+### 响应式小结：
+？？？
+reactive调用返回数据对象的代理对象Proxy，后边render取值时再触发依赖收集（取哪个值得时候再深层代理？懒代理？），再然后数据变更触发trigger更新，
+
+6.  响应式 Api：Ref 实现（reactive 不能代理普通类型，故使用 ref 响应式处理普通值）
+    > ref 本质就是通过类的属性访问器来实现的(相当于 vue2 的 defineProperty)，可以将一个普通值类型进行包装。
+
+```js
+import { hasChanged, isObject } from "@vue/shared";
+import { track, trigger } from "./effect";
+import { TrackOpTypes, TriggerOpTypes } from "./operations";
+import { reactive } from "./reactive";
+
+export function ref(value) { // ref Api
+    return createRef(value);
+}
+
+export function shallowRef(value) { // shallowRef Api
+    return createRef(value, true);
+}
+function createRef(rawValue, shallow = false) {
+    return new RefImpl(rawValue, shallow)
+}
+// ref传递的值是对象或数组会自动调用reactive进行代理；
+const convert = (val) => isObject(val) ? reactive(val) : val; // 递归响应式
+
+class RefImpl {
+    private _value;
+    public readonly __v_isRef = true; // 标识是ref
+    constructor(private _rawValue, public readonly _shallow) {
+        this._value = _shallow ? _rawValue : convert(_rawValue)
+    }
+    get value() {
+        track(this, TrackOpTypes.GET, 'value');
+        return this._value;
+    }
+    set value(newVal) {
+        if (hasChanged(newVal, this._rawValue)) {
+            this._rawValue = newVal; // 保存值
+            this._value = this._shallow ? newVal : convert(newVal);
+            trigger(this, TriggerOpTypes.SET, 'value', newVal);
+        }
+    }
+}
+```
 
 ```js
 // reactive 响应式 api
@@ -139,6 +432,9 @@ JSON.stringfy 实现深拷贝还是有一些地方值得注意，总结下来主
 ```
 
 - ref 和 reactive 的区别 reactive 内部采用 proxy ref 中内部使用的是 defineProperty(class 的 get 和 set babel 编译后还是 defineProperty)
+
+8.  实现 computed
+    > computed 的整体思路和 Vue2.0 源码基本一致，也是基于缓存来实现的。
 
 ## computed 部分功能，参加 example 用例
 
@@ -283,6 +579,7 @@ import { createAppAPI } from './apiCreateApp'
 export function createRenderer(rendererOptions) {
   // 渲染时所到的api
   const render = (vnode, container) => {
+    // 
     // 核心渲染方法
     // 将虚拟节点转化成真实节点插入到容器中
     patch(null, vnode, container) // 初始化逻辑老的虚拟节点为null
@@ -307,7 +604,7 @@ export function createAppAPI(render) {
         // 1.通过rootComponent 创建vnode
         // 2.调用render方法将vnode渲染到rootContainer中
         const vnode = createVNode(rootComponent, rootProps)
-        render(vnode, rootContainer)
+        render(vnode, rootContainer)  // 真实render执行在组件的update函数（effect函数里边执行render函数，触发依赖收集）
         app._container = rootContainer
       },
     }
@@ -339,6 +636,14 @@ export const createVNode = (type, props, children = null) => {
   return vnode
 }
 ```
+### 组件初始化流程小结：
+？？？
+createApp(rootComponent,rootProps)dom包中的-->createRenderer(rendererOptions).createApp(rootComponent, rootProps);core包中的，返回app,
+
+--->调用app中mount()方法-->createVNode(rootComponent, rootProps)--1.通过rootComponent 创建vnode,然后触发render方法
+--->render执行在组件的update函数（effect函数里边执行render函数，触发依赖收集）
+--->render(vnode, rootContainer)// 2.调用render方法将vnode渲染到rootContainer中
+渲染：--->patch(null, vnode, container)// 将虚拟节点转化成真实节点插入到容器中
 
 ### 组件初次渲染，渲染流程：
 
